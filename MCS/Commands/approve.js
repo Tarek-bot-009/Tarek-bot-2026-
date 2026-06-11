@@ -5,7 +5,7 @@ const axios = require("axios");
 module.exports = {
     config: {
         name: "approve",
-        version: "3.1.0",
+        version: "3.1.1",
         credit: "MOHAMMAD BADOL",
         role: 1,
         description: "Approve pending threads + custom owner pic",
@@ -32,7 +32,7 @@ module.exports = {
                     const isApproved = config.APPROVAL_SYSTEM.APPROVED_THREADS.includes(group.threadID);
                     const isPending = config.APPROVAL_SYSTEM.PENDING_THREADS.some(t => t.id === group.threadID);
 
-                    if (!isApproved &&!isPending) {
+                    if (!isApproved && !isPending) {
                         config.APPROVAL_SYSTEM.PENDING_THREADS.push({
                             id: group.threadID,
                             name: group.name || "Unnamed Group"
@@ -42,6 +42,9 @@ module.exports = {
                 }
 
                 fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
+                
+                // [FIXED] মেইন ফাইলের ক্যাশ মেমোরি রিফ্রেশ
+                if (typeof global.reloadConfig === "function") global.reloadConfig();
 
                 await api.deleteMessage(waitMsg.messageID);
                 return api.sendMessage(
@@ -94,6 +97,9 @@ module.exports = {
         config.APPROVAL_SYSTEM.PENDING_THREADS.splice(index, 1);
         fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
 
+        // [FIXED] মেইন ফাইলের ক্যাশ মেমোরি রিফ্রেশ (যাতে মেইন ফাইল সাথে সাথে বুঝতে পারে গ্রুপটি Approved)
+        if (typeof global.reloadConfig === "function") global.reloadConfig();
+
         // 🔥 তোমার Google Drive ছবি
         const driveFileId = "1ITONZqIZdgshuwVC1Sgk1KservMD9lMT";
         const driveDownloadUrl = `https://drive.google.com/uc?export=download&id=${driveFileId}`;
@@ -129,7 +135,7 @@ Your group has been successfully approved.
             }, targetGroup.id);
 
             // টেম্প ফাইল ডিলিট
-            fs.unlinkSync(imgPath);
+            if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
 
         } catch (e) {
             // ছবি না পাইলে শুধু টেক্সট পাঠাও
